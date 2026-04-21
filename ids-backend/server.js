@@ -1,0 +1,105 @@
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const { spawn } = require("child_process");
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+/* =========================
+   MongoDB Connection
+========================= */
+mongoose.connect("mongodb://localhost:27017/ids")
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ MongoDB error:", err));
+
+/* =========================
+   Schema + Model
+========================= */
+const LogSchema = new mongoose.Schema({
+  duration: Number,
+  ip_proto: Number,
+  frame_len: Number,
+  prediction: String,
+  time: { type: Date, default: Date.now }
+});
+
+const Log = mongoose.model("Log", LogSchema);
+
+/* =========================
+   ROUTES
+========================= */
+
+// Root test
+app.get("/", (req, res) => {
+  res.send("🚀 IDS Backend Running");
+});
+
+// Fetch logs
+app.get("/logs", async (req, res) => {
+  try {
+    const logs = await Log.find().sort({ time: -1 }).limit(50);
+    res.json(logs);
+  } catch (err) {
+    console.error("❌ Logs fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch logs" });
+  }
+});
+
+// Prediction route (AI MODEL)
+app.post("/predict", (req, res) => {
+
+  const py = spawn("python3", ["../ids/predict.py"]);
+
+  const input = {
+    duration: req.body.duration || 1,
+    ip_proto: req.body.ip_proto || 6,
+    src_bytes: req.body.src_bytes || 100,
+    dst_bytes: req.body.dst_bytes || 50
+  };
+
+  py.stdin.write(JSON.stringify(input));
+  py.stdin.end();
+
+  // Handle prediction output
+  let output = "";
+
+py.stdout.on("data", (data) => {
+  output += data.toString();
+});
+
+py.stdout.on("end", async () => {
+  try {
+    const result = JSON.parse(output);
+
+    const log = new Log({
+      duration: input.duration,
+      ip_proto: input.ip_proto,
+      frame_len: input.src_bytes + input.dst_bytes,
+      prediction: result.prediction
+    });
+
+    await log.save();
+
+    return res.json(result);
+
+  } catch (err) {
+    console.error("❌ Processing error:", err);
+    return res.status(500).json({ error: "Processing failed" });
+  }
+});
+
+  // Handle Python errors
+  py.stderr.on("data", (err) => {
+  console.error("❌ Python error:", err.toString());
+});
+
+});
+
+/* =========================
+   START SERVER
+========================= */
+app.listen(5000, "0.0.0.0", () => {
+  console.log("🚀 IDS Backend running on port 5000");
+});
