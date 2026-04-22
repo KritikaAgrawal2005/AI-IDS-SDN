@@ -1,33 +1,68 @@
+import { useMemo } from "react";
+
 function StatsCards({ logs }) {
-  const total = logs.length;
-  const attacks = logs.filter(l => l.prediction === "ATTACK").length;
-  const normal = total - attacks;
+
+  // ✅ optimize calculations (prevents stale values)
+  const { total, normal, suspicious } = useMemo(() => {
+    const total = logs.length;
+
+    const normal = logs.filter(
+      l => l.prediction === "NORMAL"
+    ).length;
+
+    const suspicious = logs.filter(
+      l => l.prediction === "SUSPICIOUS"
+    ).length;
+
+    return { total, normal, suspicious };
+  }, [logs]);
 
   return (
     <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(3, 1fr)",
+      display: "flex",
       gap: "20px",
       marginTop: "20px"
     }}>
-      <Card title="Total Packets" value={total} color="#38bdf8" />
-      <Card title="Normal Traffic" value={normal} color="#4ade80" />
-      <Card title="Attacks Detected" value={attacks} color="#f87171" />
-    </div>
-  );
-}
 
-function Card({ title, value, color }) {
-  return (
-    <div style={{
-      background: "#020617",
-      padding: "20px",
-      borderRadius: "12px",
-      textAlign: "center",
-      border: `1px solid ${color}`
-    }}>
-      <h3 style={{ color }}>{title}</h3>
-      <h1>{value}</h1>
+      {/* Total */}
+      <div style={{
+        flex: 1,
+        padding: "20px",
+        border: "1px solid #38bdf8",
+        borderRadius: "12px",
+        textAlign: "center",
+        background: "#020617"
+      }}>
+        <h3 style={{ color: "#38bdf8" }}>Total Flows</h3>
+        <h1>{total}</h1>
+      </div>
+
+      {/* Normal */}
+      <div style={{
+        flex: 1,
+        padding: "20px",
+        border: "1px solid #22c55e",
+        borderRadius: "12px",
+        textAlign: "center",
+        background: "#020617"
+      }}>
+        <h3 style={{ color: "#22c55e" }}>Normal Flows</h3>
+        <h1>{normal}</h1>
+      </div>
+
+      {/* Suspicious */}
+      <div style={{
+        flex: 1,
+        padding: "20px",
+        border: "1px solid #ef4444",
+        borderRadius: "12px",
+        textAlign: "center",
+        background: "#020617"
+      }}>
+        <h3 style={{ color: "#ef4444" }}>Suspicious Flows</h3>
+        <h1>{suspicious}</h1>
+      </div>
+
     </div>
   );
 }
