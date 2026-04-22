@@ -1,7 +1,7 @@
 import TimelineChart from "./components/TimelineChart";
 import AttackAlert from "./components/AttackAlert";
 import TrafficChart from "./components/TrafficChart";
-import LogsTable from "./components/LogsTable";
+
 import StatsCards from "./components/StatsCards";
 import { useEffect, useState } from "react";
 import axios from "axios";
